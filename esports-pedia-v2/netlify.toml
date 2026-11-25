@@ -1,0 +1,48 @@
+# Netlify settings for Esports Pedia v2 (no build step: plain HTML/CSS/JS)
+[build]
+  publish = "."
+
+# Clean profile URLs. Real files always win; these rules only fill the gaps.
+# Example: /teams/team-alpha  ->  team.html (the page reads "team-alpha" from the address)
+[[redirects]]
+  from = "/teams/:slug"
+  to = "/team.html"
+  status = 200
+[[redirects]]
+  from = "/players/:slug"
+  to = "/player.html"
+  status = 200
+[[redirects]]
+  from = "/tournaments/:slug"
+  to = "/tournament.html"
+  status = 200
+[[redirects]]
+  from = "/organizations/:slug"
+  to = "/organization.html"
+  status = 200
+[[redirects]]
+  from = "/games/:slug"
+  to = "/game.html"
+  status = 200
+[[redirects]]
+  from = "/rankings/:slug"
+  to = "/ranking.html"
+  status = 200
+[[redirects]]
+  from = "/news/:slug"
+  to = "/article.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/admin*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"

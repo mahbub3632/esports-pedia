@@ -1,0 +1,24 @@
+/* Esports Pedia v2 - design tokens + base (Dark Green / Red / Gold) */
+:root{
+  --bg:#03120d; --panel:#06291c; --panel-head:#0a3a28; --border:#1d5a40;
+  --green:#0f6b43; --red:#d6001c; --gold:#ffc933; --orange:#ff9d00;
+  --text:#eaf3ee; --muted:#9fb8ab;
+  --radius:12px; --wrap:1360px;
+  --font-head:"Space Grotesk",Inter,system-ui,sans-serif;
+  --font-body:Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.6 var(--font-body)}
+h1,h2,h3{font-family:var(--font-head);margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 20px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.panel>h2{background:var(--panel-head);border-bottom:2px solid var(--gold);padding:11px 16px;font-size:16px;font-weight:600}
+.panel .body{padding:14px 16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;font:600 14px var(--font-body);padding:10px 18px;border-radius:8px;border:2px solid transparent;cursor:pointer;white-space:nowrap}
+.btn.red{background:var(--red);color:#fff}.btn.red:hover{background:#f0001f;color:#fff}
+.btn.gold{border-color:var(--gold);color:var(--gold);background:transparent}.btn.gold:hover{background:var(--gold);color:#03120d}
+.muted{color:var(--muted)}

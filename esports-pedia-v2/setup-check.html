@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Setup Check – Esports Pedia</title>
+<link rel="icon" href="assets/brand/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+ .top{background:var(--panel-head);border-bottom:3px solid var(--red)}
+ .top .wrap{display:flex;align-items:center;gap:12px;padding-top:12px;padding-bottom:12px}
+ .top img{width:40px;height:40px;display:block}.top b{font:700 20px var(--font-head)}
+ main{padding:24px 0 40px;display:grid;gap:16px}
+ .row{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid var(--border)}
+ .row:last-child{border-bottom:0}
+ .tag{flex:none;min-width:64px;text-align:center;font:600 12px var(--font-body);padding:3px 10px;border-radius:999px;border:1px solid var(--border)}
+ .ok{background:var(--green);border-color:var(--green)}.bad{background:var(--red);border-color:var(--red)}.wait{color:var(--gold);border-color:var(--gold)}
+ .row p{margin:2px 0 0;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><img src="assets/brand/logo.png" alt=""><b>Esports Pedia – Setup Check</b></div></header>
+<main class="wrap">
+ <div class="panel"><h2>Supabase সংযোগ পরীক্ষা</h2><div id="out"></div></div>
+ <p class="muted">এই পেজ শুধু আপনার জন্য। সব পরীক্ষা সবুজ (OK) হলে Phase 1 শেষ। পরে এই পেজটা মুছে দেওয়া যাবে।</p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+var out=document.getElementById('out');
+function row(id,title){var d=document.createElement('div');d.className='row';d.innerHTML='<span class="tag wait" id="t-'+id+'">...</span><div><b>'+title+'</b><p id="p-'+id+'"></p></div>';out.appendChild(d)}
+function set(id,ok,msg){var t=document.getElementById('t-'+id);t.className='tag '+(ok?'ok':'bad');t.textContent=ok?'OK':'ERROR';document.getElementById('p-'+id).textContent=msg}
+row('cfg','১. js/config.js ভরা হয়েছে কিনা');row('db','২. ডেটাবেস পড়া যাচ্ছে কিনা (site_settings)');
+row('tiles','৩. হোমপেজ টাইলের ডেটা (home_tiles)');row('st','৪. ছবির স্টোরেজ (media bucket)');row('auth','৫. লগইন অবস্থা');
+(async function(){
+ if(!EP.configured){set('cfg',false,'config.js-এ Project URL ও anon key বসান।');['db','tiles','st','auth'].forEach(function(i){var t=document.getElementById('t-'+i);t.textContent='SKIP';document.getElementById('p-'+i).textContent='আগে ১ নম্বর ঠিক করুন।'});return}
+ set('cfg',true,'Project URL ও key পাওয়া গেছে।');
+ try{
+  var a=await EP.db.from('site_settings').select('key,value').limit(20);
+  if(a.error)throw a.error;
+  set('db',a.data.length>0,a.data.length>0?a.data.length+'টা সেটিং পাওয়া গেছে।':'টেবিল আছে কিন্তু খালি। seed.sql চালান।');
+ }catch(e){set('db',false,'ত্রুটি: '+(e.message||e)+' (schema.sql চালানো হয়েছে কিনা দেখুন।)')}
+ try{
+  var b=await EP.db.from('home_tiles').select('label').eq('is_published',true);
+  if(b.error)throw b.error;
+  set('tiles',b.data.length>0,b.data.length+'টা টাইল পাওয়া গেছে।'+(b.data.length?'':' seed.sql চালান।'));
+ }catch(e){set('tiles',false,'ত্রুটি: '+(e.message||e))}
+ try{
+  var c=await EP.db.storage.from('media').list('',{limit:1});
+  if(c.error)throw c.error;
+  set('st',true,'media bucket পাওয়া গেছে (এখন খালি থাকাই স্বাভাবিক)।');
+ }catch(e){set('st',false,'ত্রুটি: '+(e.message||e)+' (schema.sql-এর শেষ অংশ চালানো হয়েছে কিনা দেখুন।)')}
+ try{
+  var s=await EP.db.auth.getSession();
+  set('auth',true,s.data.session?'লগইন করা আছে: '+s.data.session.user.email:'লগইন করা নেই (Phase 3-এ অ্যাডমিন লগইন আসবে)।');
+ }catch(e){set('auth',false,String(e.message||e))}
+})();
+</script>
+</body>
+</html>
