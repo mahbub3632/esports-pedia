@@ -8,7 +8,8 @@ window.EP = window.EP || {};
   // Public address of an image stored in the "media" bucket (or a file inside the project).
   EP.imageUrl = function (path) {
     if (!path) return '';
-    if (/^(https?:|assets\/|\/assets\/)/.test(path)) return path;
+    if (/^https?:/.test(path)) return path;
+    if (/^\/?assets\//.test(path)) return '/' + path.replace(/^\//, '');
     return EP.configured ? c.SUPABASE_URL + '/storage/v1/object/public/media/' + path : '';
   };
 })();
