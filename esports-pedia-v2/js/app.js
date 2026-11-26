@@ -92,12 +92,12 @@
   EP.layout = function () {
     var app = document.getElementById('app');
     var head = document.createElement('div');
-    head.innerHTML = '<header class="top" id="top"><div class="wrap"><a class="brand" href="/"><img src="/assets/brand/logo.png" alt="EP"><b>Esports <span>Pedia</span></b></a>' +
+    head.innerHTML = '<header class="top" id="top"><div class="wrap"><a class="brand" href="/"><img src="/assets/brand/logo.png" alt="EP" onerror="this.onerror=null;this.src=\'/assets/brand/logo.png\'"><b id="bn">Esports <span>Pedia</span></b></a>' +
       '<form class="search" role="search" action="/search/" method="get"><input id="q" name="q" type="search" placeholder="Search teams, players, tournaments" aria-label="Search" maxlength="80"><button type="submit">Search</button></form>' +
       '<a class="btn red" href="/submit/">Submit an Update</a></div></header><nav class="main" aria-label="Main"><div class="wrap" id="nav">' + navHtml(DEFAULT_NAV) + '</div></nav>';
     while (head.firstChild) document.body.insertBefore(head.firstChild, app);
     var foot = document.createElement('div');
-    foot.innerHTML = '<footer class="site"><div class="wrap"><span><b>Esports Pedia</b> – Bangladesh Esports Encyclopedia</span><nav aria-label="Footer"><a href="/submit/">Submit an Update</a><a href="/media/">Media</a><a href="/news/">News</a><span id="fsoc"></span><a href="/admin/">Admin</a></nav></div></footer>' +
+    foot.innerHTML = '<footer class="site"><div class="wrap"><span><b id="fn">Esports Pedia</b> – <span id="ft">Bangladesh Esports Encyclopedia</span></span><nav aria-label="Footer"><a href="/submit/">Submit an Update</a><a href="/media/">Media</a><a href="/news/">News</a><span id="fsoc"></span><a href="/admin/">Admin</a></nav></div></footer>' +
       '<nav class="bar" aria-label="Quick"><a href="/news/"><svg viewBox="0 0 24 24"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9z"/></svg>Trending</a>' +
       '<a href="/tournaments/"><svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H4v1a3 3 0 0 0 4 3M16 6h4v1a3 3 0 0 1-4 3M12 13v4M8 20h8"/></svg>Tournaments</a>' +
       '<a class="c" href="/submit/"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Contribute</a>' +
@@ -106,9 +106,28 @@
     while (foot.firstChild) document.body.appendChild(foot.firstChild);
     var d = document.querySelector('nav.main details'); if (d && window.innerWidth < 900) d.open = true;
   };
+  // ---- brand (name / logo / favicon) controlled from Admin > Settings ----
+  function nameHtml(n) { var w = String(n).trim().split(/\s+/); return w.length > 1 ? esc(w.slice(0, -1).join(' ')) + ' <span>' + esc(w[w.length - 1]) + '</span>' : esc(n); }
+  EP.applyBrand = function (b) {
+    var name = b.name || 'Esports Pedia';
+    document.querySelectorAll('.brand img').forEach(function (i) { if (i.getAttribute('src') !== b.logo) { i.onerror = function () { i.onerror = null; i.src = '/assets/brand/logo.png'; }; i.src = b.logo; } });
+    var bn = document.getElementById('bn'); if (bn) bn.innerHTML = nameHtml(name);
+    var fn = document.getElementById('fn'); if (fn) fn.textContent = name;
+    var ft = document.getElementById('ft'); if (ft && b.tag) ft.textContent = b.tag;
+    var ic = document.querySelector('link[rel~="icon"]'); if (ic && b.fav) ic.setAttribute('href', b.fav);
+    document.title = document.title.replace(/Esports Pedia/g, name);
+  };
+  EP.brand = function () {
+    var s = EP.settings || {};
+    var b = { name: (s.site_name || '').trim() || 'Esports Pedia', tag: (s.tagline || '').trim(), logo: s.site_logo ? EP.imageUrl(s.site_logo) : '/assets/brand/logo.png', fav: s.site_favicon ? EP.imageUrl(s.site_favicon) : '/assets/brand/favicon.png' };
+    EP.applyBrand(b);
+    if ((s.site_description || '').trim() && document.body.dataset.page === 'home') { var m = document.querySelector('meta[name="description"]'); if (m) m.setAttribute('content', s.site_description.trim()); }
+    try { localStorage.setItem('ep_brand', JSON.stringify(b)); } catch (e) { /* private mode */ }
+  };
+  EP.cachedBrand = function () { try { var c = JSON.parse(localStorage.getItem('ep_brand') || 'null'); if (c && c.logo) EP.applyBrand(c); } catch (e) { /* ignore */ } };
   EP.loadChrome = async function () {
     try {
-      var s = await EP.q('site_settings'); s.forEach(function (r) { EP.settings[r.key] = r.value; });
+      var s = await EP.q('site_settings'); s.forEach(function (r) { EP.settings[r.key] = r.value; }); EP.brand();
       var n = await EP.q('navigation_items', { order: [['sort_order']] });
       if (n.length) { document.getElementById('nav').innerHTML = navHtml(n.filter(function (x) { return !x.parent_id; }).map(function (x) { return [x.label, x.url]; })); var d = document.querySelector('nav.main details'); if (d && window.innerWidth < 900) d.open = true; }
       var f = [['facebook_url', 'Facebook'], ['youtube_url', 'YouTube'], ['discord_url', 'Discord']].filter(function (x) { return EP.safeUrl(EP.settings[x[0]]); })
@@ -117,7 +136,7 @@
     } catch (e) { /* menu falls back to the default links */ }
   };
   EP.run = async function () {
-    EP.layout();
+    EP.layout(); EP.cachedBrand();
     var app = document.getElementById('app'), page = document.body.dataset.page;
     if (!EP.configured || !EP.db) { app.innerHTML = '<div class="notice"><b>সাইট এখনো Supabase-এর সাথে যুক্ত হয়নি।</b><br>js/config.js ফাইলে Project URL ও anon key বসান (SETUP-BN.md দেখুন)।</div>'; return; }
     app.innerHTML = '<div class="empty">Loading…</div>';

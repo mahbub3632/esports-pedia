@@ -69,7 +69,7 @@
     S.bd_media = function () {
       return EP.panel('Bangladesh Esports Media', media.length ? '<div class="cards">' + media.map(function (m) { return '<a class="card" href="/media/"><div class="row">' + EP.img(m.logo_path, m.name, 'thumb lg') + '<div><h3>' + esc(m.name) + '</h3></div></div></a>'; }).join('') + '</div>' : EP.empty());
     };
-    var hero = '<section class="hero"><h1>' + esc(EP.settings.site_name || 'Esports Pedia') + '</h1><p>' + esc(EP.settings.tagline || 'Bangladesh Esports Encyclopedia') + '. Teams, players, tournaments, transfers, results and earnings in one place.</p><a class="btn red" href="/teams/">Browse Teams</a><a class="btn gold" href="/tournaments/">View Tournaments</a></section>';
+    var hero = '<section class="hero"><h1>' + esc(EP.settings.site_name || 'Esports Pedia') + '</h1><p>' + ((EP.settings.site_description || '').trim() ? esc(EP.settings.site_description.trim()) : esc(EP.settings.tagline || 'Bangladesh Esports Encyclopedia') + '. Teams, players, tournaments, transfers, results and earnings in one place.') + '</p><a class="btn red" href="/teams/">Browse Teams</a><a class="btn gold" href="/tournaments/">View Tournaments</a></section>';
     var tl = tiles.length ? '<div class="tiles">' + tiles.map(function (t) { return '<a class="tile" href="' + esc(t.url) + '">' + (t.image_path ? '<img class="im" src="' + esc(EP.imageUrl(t.image_path)) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="im"></span>') + '<span>' + esc(t.label) + '</span></a>'; }).join('') + '</div>' : '';
     return hero + tl + '<div class="grid2">' + secs.map(function (s) { return S[s.key] ? S[s.key]() : ''; }).join('') + '</div>';
   };

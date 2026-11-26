@@ -54,11 +54,11 @@ GitHub রিপোজিটরি: `mahbub3632/esports-pedia`
 পুরোনো ফাইলগুলো এখন যেখানে আছে সেখানেই থাকবে, কিছু মুছবে না। নতুন সাইট ঠিকমতো চলার পর পুরোনো ফাইল মুছে ফেলতে পারবেন (ভাগ ৪)।
 `config.js`-এ আপনার anon কী বসানো আছে কিনা আপলোডের আগে আবার দেখে নিন।
 
-### আগেই আপলোড করে থাকলে: শুধু নতুন ফাইল দিন (Statistics আপডেট)
-**সাবধান:** পুরো ফোল্ডার আবার আপলোড করলে আপনার `js/config.js`-এর আসল কী মুছে গিয়ে ফাঁকা (PASTE_...) হয়ে যাবে। তাই `statistics-update.zip` ব্যবহার করুন, এতে `config.js` নেই।
-1. `statistics-update.zip` এক্সট্র্যাক্ট করুন, ভেতরে `esports-pedia-v2` ফোল্ডার পাবেন।
+### আগেই আপলোড করে থাকলে: শুধু নতুন ফাইল দিন (Statistics ও Settings আপডেট)
+**সাবধান:** পুরো ফোল্ডার আবার আপলোড করলে আপনার `js/config.js`-এর আসল কী মুছে গিয়ে ফাঁকা (PASTE_...) হয়ে যাবে। তাই `update-settings-and-statistics.zip` ব্যবহার করুন, এতে `config.js` নেই।
+1. `update-settings-and-statistics.zip` এক্সট্র্যাক্ট করুন, ভেতরে `esports-pedia-v2` ফোল্ডার পাবেন।
 2. GitHub-এ **Add file**, তারপর **Upload files**, ফোল্ডারটা টেনে ছাড়ুন, **Commit changes** চাপুন। একই নামের ফাইল বদলে যাবে।
-3. Supabase-এ `migration-003.sql` চালান।
+3. Supabase-এ `migration-003.sql` চালান (Statistics মেনুর জন্য)। Settings-এর জন্য নতুন কোনো SQL লাগে না।
 4. Netlify নিজে নতুন করে প্রকাশ করবে। ১-২ মিনিট পর `আপনার-সাইট/statistics/` খুলুন।
 
 ---------------------------------------------------------------
@@ -99,10 +99,16 @@ GitHub রিপোজিটরি: `mahbub3632/esports-pedia`
 5. **Tournaments**, তারপর **Tournament Teams**, **Match Schedule**, **Results**।
 6. **Transfers**: Published করলে খেলোয়াড়ের বর্তমান টিম নিজে বদলে যায়।
 7. **Rankings → Ranking Entries**: Top Rusher, IGL, Sniper, Bomber-এর তালিকা হাতে বসান। নতুন রোল চাইলে **Ranking Roles**, তারপর **Rankings**।
-8. **Earnings**: টিম ও খেলোয়াড়ের মোট আয়। মুদ্রার চিহ্ন (৳ বা BDT) **Settings**-এ `currency` ঘরে দিন।
-9. **News, Player Spotlight, Media Outlets**।
-10. **Homepage Sections / Tiles / Navigation Menu**: হোমপেজের অংশ ও মেনুর ক্রম, দেখানো বা লুকানো।
-11. **Contributions**: দর্শকদের পাঠানো আবেদন দেখে Approve বা Reject করুন।
+8. **Settings** (বাঁ মেনুতে `Settings`): এখান থেকে সাইটের নাম, ট্যাগলাইন, বর্ণনা (Description), লোগো ও ফেভিকন বদলানো যায়।
+   - লোগো ও ফেভিকন **Supabase Storage-এ `branding` ফোল্ডারে** জমা হয়। নতুন ছবি দিলে পুরোনোটা নিজে মুছে যায়। **Remove** চাপলে ডিফল্ট লোগোতে ফিরে যায়।
+   - ছবি PNG, JPG বা WEBP, সর্বোচ্চ ৫ MB, কমপক্ষে ৩২×৩২ পিক্সেল। ফেভিকন অবশ্যই বর্গাকার (যেমন ১২৮×১২৮)।
+   - **Save settings** চাপলেই পাবলিক সাইটে নতুন নাম, লোগো ও বর্ণনা দেখাবে। কোড বা GitHub বদলাতে হবে না।
+   - ব্রাউজার ট্যাবের ফেভিকন ব্রাউজার অনেকক্ষণ মনে রাখে, তাই বদলাতে কিছুক্ষণ লাগতে পারে (দরকারে `Ctrl+Shift+R`)।
+   - ফোনেও Settings একইভাবে কাজ করে।
+9. **Earnings**: টিম ও খেলোয়াড়ের মোট আয়। মুদ্রার চিহ্ন (৳ বা BDT) **Settings**-এ `currency` ঘরে দিন।
+10. **News, Player Spotlight, Media Outlets**।
+11. **Homepage Sections / Tiles / Navigation Menu**: হোমপেজের অংশ ও মেনুর ক্রম, দেখানো বা লুকানো।
+12. **Contributions**: দর্শকদের পাঠানো আবেদন দেখে Approve বা Reject করুন।
 
 **মনে রাখবেন:**
 - কিছু **Published** টিক না দিলে সেটা পাবলিক সাইটে দেখা যাবে না।

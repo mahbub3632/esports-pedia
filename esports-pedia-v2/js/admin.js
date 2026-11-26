@@ -69,7 +69,7 @@
       ['label', 'Label', 'text', { req: 1 }], ['url', 'Link (e.g. /teams/)', 'text', { req: 1 }], ['image_path', 'Tile image', 'image', { folder: 'tiles' }], ['sort_order', 'Order', 'number', { def: 0 }], ['is_published', 'Published', 'bool', { def: true }]] },
     navigation_items: { t: 'Navigation Menu', table: 'navigation_items', order: ['sort_order'], cols: [['label', 'Label'], ['url', 'Link'], ['sort_order', 'Order']], fields: [
       ['label', 'Label', 'text', { req: 1 }], ['url', 'Link (e.g. /teams/)', 'text', { req: 1 }], ['sort_order', 'Order', 'number', { def: 0 }], ['is_published', 'Published', 'bool', { def: true }]] },
-    site_settings: { t: 'Website Settings', table: 'site_settings', pk: 'key', order: ['key'], note: 'Keys: site_name, tagline, currency (যেমন ৳ বা BDT), contact_email, facebook_url, youtube_url, discord_url।', cols: [['key', 'Key'], ['value', 'Value']], fields: [
+    site_settings: { t: 'Advanced Settings (all keys)', table: 'site_settings', pk: 'key', order: ['key'], note: 'Keys: site_name, tagline, currency (যেমন ৳ বা BDT), contact_email, facebook_url, youtube_url, discord_url।', cols: [['key', 'Key'], ['value', 'Value']], fields: [
       ['key', 'Key', 'text', { req: 1, roEdit: 1 }], ['value', 'Value', 'textarea', { wide: 1 }]] }
   };
   Object.keys(ENT).forEach(function (k) { ENT[k].k = k; ENT[k].pk = ENT[k].pk || 'id'; ENT[k].fields = ENT[k].fields.map(function (f) { return { n: f[0], l: f[1], type: f[2], o: f[3] || {} }; }); });
@@ -77,7 +77,7 @@
   var MENU = [['Dashboard', 'dash'], ['h', 'Content'], ['Teams', 'teams'], ['Players', 'players'], ['Player Order', 'order'], ['Organizations', 'organizations'], ['Games', 'games'], ['Ranking Roles', 'roles'],
     ['h', 'Competition'], ['Tournaments', 'tournaments'], ['Tournament Teams', 'ttp'], ['Match Schedule', 'matches'], ['Results', 'results'], ['Achievements', 'achievements'], ['Transfers', 'transfers'],
     ['h', 'Rankings & Earnings'], ['Rankings', 'rankings'], ['Ranking Entries', 'rentries'], ['Earnings', 'earn'], ['h', 'Editorial'], ['News', 'articles'], ['Player Spotlight', 'spotlights'], ['Media Outlets', 'media_outlets'],
-    ['h', 'Website'], ['Homepage Sections', 'home_sections'], ['Homepage Tiles', 'home_tiles'], ['Navigation Menu', 'navigation_items'], ['Settings', 'site_settings'], ['Media Library', 'lib'], ['Contributions', 'contrib']];
+    ['h', 'Website'], ['Homepage Sections', 'home_sections'], ['Homepage Tiles', 'home_tiles'], ['Navigation Menu', 'navigation_items'], ['Settings', 'settings'], ['Advanced Settings', 'site_settings'], ['Media Library', 'lib'], ['Contributions', 'contrib']];
 
   /* ---------------- login ---------------- */
   function loginView(msg) {
@@ -96,6 +96,7 @@
     var a = await db.from('admin_users').select('user_id').eq('user_id', sess.user.id);
     if (a.error || !a.data || !a.data.length) { await db.auth.signOut(); return loginView('এই অ্যাকাউন্টটি অ্যাডমিন নয়।'); }
     shell(sess.user.email); route();
+    EP.q('site_settings').then(function (rs) { rs.forEach(function (r) { EP.settings[r.key] = r.value; }); EP.brand(); }).catch(function () {});
   }
   function shell(email) {
     root.innerHTML = '<div class="ashell"><nav class="aside"><a class="brand" href="/" style="display:flex;gap:8px;align-items:center"><img src="/assets/brand/logo.png" alt="" width="30" height="30"><b>Admin</b></a>' +
@@ -266,7 +267,7 @@
     };
     $('#et').onchange = load; load();
   };
-  var FOLDERS = ['teams', 'players', 'tournaments', 'organizations', 'games', 'media', 'articles', 'tiles', 'general'];
+  var FOLDERS = ['branding', 'teams', 'players', 'tournaments', 'organizations', 'games', 'media', 'articles', 'tiles', 'general'];
   VIEWS.lib = async function () {
     main.innerHTML = '<h1>Media Library</h1><div class="bar2"><select id="lf2">' + FOLDERS.map(function (f) { return '<option>' + f + '</option>'; }).join('') + '</select><input type="file" id="lu" accept="image/png,image/jpeg,image/webp"><button class="btn red sm" id="lb">Upload</button></div><div class="panel"><div class="lib" id="ll"></div></div>';
     var load = async function () {
@@ -286,6 +287,80 @@
       b.querySelectorAll('[data-s]').forEach(function (x) { x.onclick = async function () { var u = await db.from('contributions').update({ status: x.dataset.s, admin_note: $('[data-n]', b).value || null, reviewed_at: new Date().toISOString() }).eq('id', b.dataset.id); u.error ? err(u.error) : (toast('Updated'), VIEWS.contrib()); }; });
       $('[data-x]', b).onclick = async function () { if (!confirm('মুছবেন?')) return; var d = await db.from('contributions').delete().eq('id', b.dataset.id); d.error ? err(d.error) : (toast('Deleted'), VIEWS.contrib()); };
     });
+  };
+
+
+  /* ---------------- Settings (name, description, logo, favicon, contact) ---------------- */
+  function checkImg(file, kind) {
+    return new Promise(function (ok, no) {
+      var ext = (file.name.split('.').pop() || '').toLowerCase();
+      if (['png', 'jpg', 'jpeg', 'webp'].indexOf(ext) < 0 || !/^image\/(png|jpeg|webp)$/.test(file.type)) return no(new Error('শুধু PNG, JPG বা WEBP ছবি দিন।'));
+      if (file.size > 5 * 1024 * 1024) return no(new Error('ছবি ৫ MB-এর কম হতে হবে।'));
+      var u = URL.createObjectURL(file), im = new Image();
+      im.onload = function () {
+        var w = im.naturalWidth, h = im.naturalHeight;
+        if (w < 32 || h < 32) return no(new Error('ছবি কমপক্ষে ৩২×৩২ পিক্সেল হতে হবে।'));
+        if (kind === 'favicon' && (w / h < 0.8 || w / h > 1.25)) return no(new Error('ফেভিকন বর্গাকার (square) হতে হবে, যেমন ১২৮×১২৮।'));
+        ok(u);
+      };
+      im.onerror = function () { no(new Error('ছবিটি পড়া যায়নি। অন্য ছবি দিন।')); };
+      im.src = u;
+    });
+  }
+  VIEWS.settings = async function () {
+    var d = await rows('site_settings', 'key,value'), S = {}; d.forEach(function (r) { S[r.key] = r.value || ''; });
+    var pend = {}, rm = {}, DEF = { logo: '/assets/brand/logo.png', favicon: '/assets/brand/favicon.png' }, TXT = ['site_name', 'tagline', 'site_description', 'currency', 'contact_email', 'facebook_url', 'youtube_url', 'discord_url'];
+    var cur = function (k) { if (pend[k]) return pend[k].url; if (rm[k]) return DEF[k]; return S['site_' + k] ? EP.imageUrl(S['site_' + k]) : DEF[k]; };
+    var state = function (k) { return pend[k] ? 'নতুন ছবি (Save করলে প্রযোজ্য হবে)' : rm[k] ? 'মুছে ফেলা হবে (ডিফল্ট ব্যবহার হবে)' : S['site_' + k] ? 'বর্তমান ছবি' : 'ডিফল্ট ছবি ব্যবহার হচ্ছে'; };
+    var box = function (k, title, hint) { return '<div class="bbox ' + (k === 'favicon' ? 'fav' : '') + '"><b>' + title + '</b><div class="pv"><img id="pv-' + k + '" alt=""></div><span class="hint" id="st-' + k + '"></span><input type="file" id="fi-' + k + '" accept="image/png,image/jpeg,image/webp"><div class="btns"><button type="button" class="btn del" data-rs="' + k + '">Remove (ডিফল্টে ফিরুন)</button></div><span class="hint">' + hint + '</span></div>'; };
+    var inp = function (k, l, o) { o = o || {}; return '<label' + (o.wide ? ' class="wide"' : '') + '>' + l + '<' + (o.ta ? 'textarea' : 'input') + ' name="' + k + '" maxlength="' + (o.max || 200) + '"' + (o.ta ? '>' + esc(S[k] || '') + '</textarea>' : ' value="' + esc(S[k] || '') + '"' + (o.type ? ' type="' + o.type + '"' : '') + '>') + (o.hint ? '<span class="hint" id="' + o.hint + '"></span>' : '') + '</label>'; };
+    main.innerHTML = '<h1>Settings</h1><div class="notice">এখানে বদলালে পাবলিক সাইটের লোগো, নাম, ফেভিকন ও বর্ণনা নিজে থেকেই বদলে যাবে। কোড বা GitHub-এ কিছু বদলাতে হবে না।</div>' +
+      '<form id="stf" class="stk"><section class="panel"><h2>Website identity</h2><div class="aform">' + inp('site_name', 'Website name *', { max: 60 }) + inp('tagline', 'Tagline (ছোট বাক্য)', { max: 100 }) +
+      inp('site_description', 'Website description (হোমপেজ ও সার্চ ইঞ্জিনে দেখায়)', { max: 300, ta: 1, wide: 1, hint: 'dc' }) + '</div></section>' +
+      '<section class="panel"><h2>Logo & Favicon</h2><div class="aform">' + box('logo', 'Website logo', 'PNG / JPG / WEBP, সর্বোচ্চ ৫ MB, কমপক্ষে ৩২×৩২ পিক্সেল। স্বচ্ছ ব্যাকগ্রাউন্ডের PNG ভালো।') + box('favicon', 'Favicon (ব্রাউজার ট্যাবের আইকন)', 'বর্গাকার PNG, যেমন ১২৮×১২৮ পিক্সেল।') +
+      '</div><div class="bprev" aria-label="Preview"><div class="hdr"><img id="pl" alt=""><b id="pn"></b></div><div class="tab"><img id="pf" alt=""><span id="pt"></span></div></div></section>' +
+      '<section class="panel"><h2>Contact & social links</h2><div class="aform">' + inp('currency', 'Currency symbol (যেমন ৳ বা BDT)', { max: 10 }) + inp('contact_email', 'Contact email', { max: 120, type: 'email' }) + inp('facebook_url', 'Facebook link (https://…)', { type: 'url' }) + inp('youtube_url', 'YouTube link (https://…)', { type: 'url' }) + inp('discord_url', 'Discord link (https://…)', { type: 'url' }) + '</div></section>' +
+      '<div class="bar2"><button class="btn red" type="submit" id="ssv">Save settings</button><a class="btn gold" href="#site_settings">Advanced (সব key)</a></div></form>';
+    var f = $('#stf');
+    var refresh = function () {
+      ['logo', 'favicon'].forEach(function (k) { $('#pv-' + k).src = cur(k); $('#st-' + k).textContent = state(k); });
+      var n = f.elements.site_name.value.trim() || 'Esports Pedia'; $('#pl').src = cur('logo'); $('#pf').src = cur('favicon'); $('#pn').textContent = n; $('#pt').textContent = n;
+      $('#dc').textContent = f.elements.site_description.value.length + '/300 (সার্চ ইঞ্জিনের জন্য ১৫০–১৬০ অক্ষর ভালো)';
+    };
+    f.addEventListener('input', refresh); refresh();
+    ['logo', 'favicon'].forEach(function (k) {
+      $('#fi-' + k).onchange = async function (e) {
+        var file = e.target.files[0]; if (!file) return;
+        try { var u = await checkImg(file, k); pend[k] = { file: file, url: u }; delete rm[k]; } catch (x) { e.target.value = ''; err(x); }
+        refresh();
+      };
+    });
+    document.querySelectorAll('[data-rs]').forEach(function (b) { b.onclick = function () { var k = b.dataset.rs; delete pend[k]; rm[k] = 1; $('#fi-' + k).value = ''; refresh(); }; });
+    f.onsubmit = async function (e) {
+      e.preventDefault(); var v = {}, up = [], old = [], btn = $('#ssv');
+      TXT.forEach(function (k) { v[k] = f.elements[k].value.trim(); });
+      var bad = null;
+      if (v.site_name.length < 2 || v.site_name.length > 60) bad = 'Website name ২ থেকে ৬০ অক্ষরের মধ্যে হতে হবে।';
+      else if (v.tagline.length > 100) bad = 'Tagline ১০০ অক্ষরের বেশি হবে না।';
+      else if (v.site_description.length > 300) bad = 'Description ৩০০ অক্ষরের বেশি হবে না।';
+      else if (v.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.contact_email)) bad = 'Contact email সঠিক নয়।';
+      else ['facebook_url', 'youtube_url', 'discord_url'].forEach(function (k) { if (!bad && v[k] && !EP.safeUrl(v[k])) bad = k.replace('_url', '') + ' লিংক http:// বা https:// দিয়ে শুরু হতে হবে।'; });
+      if (bad) return err(new Error(bad));
+      btn.disabled = true;
+      try {
+        for (var i = 0, ks = ['logo', 'favicon']; i < ks.length; i++) {
+          var k = ks[i], key = 'site_' + k;
+          if (pend[k]) { var p = await upload(pend[k].file, 'branding'); up.push(p); if (isStored(S[key])) old.push(S[key]); v[key] = p; }
+          else if (rm[k]) { if (isStored(S[key])) old.push(S[key]); v[key] = ''; }
+        }
+        var batch = Object.keys(v).map(function (k) { return { key: k, value: v[k] }; });
+        var r = await db.from('site_settings').upsert(batch, { onConflict: 'key' });
+        if (r.error) throw r.error;
+        await removeFiles(old).catch(function () {});
+        Object.keys(v).forEach(function (k) { EP.settings[k] = v[k]; }); EP.brand();
+        toast('Settings saved'); VIEWS.settings();
+      } catch (x) { await removeFiles(up).catch(function () {}); btn.disabled = false; err(x); }
+    };
   };
 
   /* ---------------- boot ---------------- */
