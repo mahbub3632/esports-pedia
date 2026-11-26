@@ -28,6 +28,19 @@
     if (o.limit) q = q.limit(o.limit);
     var r = await q; if (r.error) throw r.error; return r.data || [];
   };
+  // exact number of published rows (works past the 1000-row API limit)
+  EP.count = async function (table) {
+    var r = await EP.db.from(table).select('*', { count: 'exact', head: true }); if (r.error) throw r.error; return r.count || 0;
+  };
+  // fetch ALL published rows in pages of 1000 (Supabase returns at most 1000 rows per request)
+  EP.all = async function (table, cols) {
+    var out = [], from = 0;
+    for (;;) {
+      var r = await EP.db.from(table).select(cols || '*').order('id').range(from, from + 999); if (r.error) throw r.error;
+      var d = r.data || []; out = out.concat(d); if (d.length < 1000 || from > 100000) break; from += 1000;
+    }
+    return out;
+  };
   EP.one = async function (table, eq) { var r = await EP.q(table, { eq: eq, limit: 1 }); return r[0] || null; };
   // ---- addresses ----
   EP.L = {
@@ -70,7 +83,7 @@
   EP.status = function (s) { return '<span class="badge' + (s === 'live' || s === 'ongoing' ? ' live' : s === 'active' ? ' ok' : '') + '">' + esc(String(s || '').replace('_', ' ')) + '</span>'; };
 
   // ---- layout ----
-  var DEFAULT_NAV = [['Home', '/'], ['Teams', '/teams/'], ['Players', '/players/'], ['Tournaments', '/tournaments/'], ['Transfers', '/transfers/'], ['Results', '/results/'], ['Rankings', '/rankings/'], ['Earnings', '/earnings/'], ['Organizations', '/organizations/'], ['Games', '/games/'], ['Media', '/media/'], ['News', '/news/'], ['Spotlight', '/spotlight/']];
+  var DEFAULT_NAV = [['Home', '/'], ['Teams', '/teams/'], ['Players', '/players/'], ['Tournaments', '/tournaments/'], ['Transfers', '/transfers/'], ['Results', '/results/'], ['Statistics', '/statistics/'], ['Rankings', '/rankings/'], ['Earnings', '/earnings/'], ['Organizations', '/organizations/'], ['Games', '/games/'], ['Media', '/media/'], ['News', '/news/'], ['Spotlight', '/spotlight/']];
   function active(url) { var p = location.pathname; return url === '/' ? (p === '/' || p === '/index.html') : p.indexOf(url.replace(/\/$/, '')) === 0; }
   function navHtml(items) {
     var a = function (x) { return '<a href="' + esc(x[1]) + '"' + (active(x[1]) ? ' class="on"' : '') + '>' + esc(x[0]) + '</a>'; };

@@ -96,3 +96,8 @@ footer.site nav{display:flex;gap:18px;flex-wrap:wrap}
  footer.site .wrap{flex-direction:column}
 }
 @media(max-width:420px){.cards{grid-template-columns:1fr}}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:var(--radius);padding:16px}
+.kpi b{display:block;font:700 32px var(--font-head);color:var(--gold);line-height:1.1}.kpi span{color:var(--muted);font-size:14px}
+@media(max-width:760px){.kpis{grid-template-columns:1fr 1fr}.kpi b{font-size:26px}}

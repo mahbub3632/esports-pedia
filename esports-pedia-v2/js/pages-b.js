@@ -171,6 +171,50 @@
       '<label>Source link (optional)<input name="source_url" type="url" maxlength="500" placeholder="https://"></label><label>Your name (optional)<input name="name" maxlength="100"></label><label>Contact (optional)<input name="contact" maxlength="150"></label>' +
       '<div class="hp" aria-hidden="true"><label>Leave empty<input name="hp" tabindex="-1" autocomplete="off"></label></div><button class="btn red" type="submit">Submit</button><div id="sm" role="status"></div></form>');
   };
+
+  /* ---------- STATISTICS (real numbers from the database; nothing is invented) ---------- */
+  function n0(x) { return Number(x || 0).toLocaleString('en-US'); }
+  function sum(l, k) { return l.reduce(function (s, x) { return s + (Number(x[k]) || 0); }, 0); }
+  function kv(heads, rows) { return EP.table(heads, rows.map(function (r) { return '<tr><td>' + r[0] + '</td><td class="num gold">' + r[1] + '</td></tr>'; })); }
+  P.statistics = async function () {
+    var C = await Promise.all([EP.count('teams'), EP.count('players'), EP.count('tournaments'), EP.count('matches')]);
+    var A = await Promise.all([EP.all('teams', 'id,slug,name,logo_path,status,total_earnings'), EP.all('players', 'id,status,role_id,current_team_id'), EP.all('tournaments', 'id,status,prize_pool'),
+      EP.all('results', 'id,team_id,kills,total_points'), EP.all('transfers', 'id,type,transfer_date'), EP.q('roles', { order: [['sort_order']] }), EP.q('rankings', { order: [['sort_order']] }), EP.q('ranking_entries', { order: [['rank']] })]);
+    var teams = A[0], players = A[1], tours = A[2], res = A[3], trs = A[4], roles = A[5], rks = A[6], ents = A[7], T = EP.by(teams);
+    var kills = sum(res, 'kills'), cnt = function (l, k, v) { return l.filter(function (x) { return x[k] === v; }).length; };
+    var kpi = [['Total Teams', C[0]], ['Total Players', C[1]], ['Total Tournaments', C[2]], ['Total Matches', C[3]], ['Total Kills', kills]];
+    var html = '<h1>Statistics</h1><div class="kpis">' + kpi.map(function (k) { return '<div class="kpi"><b>' + n0(k[1]) + '</b><span>' + k[0] + '</span></div>'; }).join('') + '</div>' +
+      '<p class="muted">শুধু প্রকাশিত (Published) তথ্য থেকে গণনা। Matches = ম্যাচ শিডিউলে যোগ করা এন্ট্রি; Kills = প্রকাশিত রেজাল্টের মোট কিল।</p>';
+
+    var rosterTeams = {}; players.forEach(function (p) { if (p.current_team_id && T[p.current_team_id]) rosterTeams[p.current_team_id] = 1; });
+    var topT = teams.slice().sort(function (a, b) { return Number(b.total_earnings) - Number(a.total_earnings); }).filter(function (t) { return Number(t.total_earnings) > 0; }).slice(0, 5);
+    var teamsP = EP.panel('Teams', kv(['Item', 'Value'], [['Active', n0(cnt(teams, 'status', 'active'))], ['Inactive', n0(cnt(teams, 'status', 'inactive'))], ['Disbanded', n0(cnt(teams, 'status', 'disbanded'))], ['Teams with a current roster', n0(Object.keys(rosterTeams).length)], ['Total team earnings', EP.money(sum(teams, 'total_earnings'))]]) +
+      '<div class="body"><b>Top teams by earnings</b></div>' + EP.table(['Team', 'Earnings'], topT.map(function (t) { return '<tr><td>' + EP.tl(t) + '</td><td class="num gold">' + EP.money(t.total_earnings) + '</td></tr>'; })) + '<a href="/teams/" style="display:block;padding:12px 16px;color:var(--gold);font-weight:600;border-top:1px solid var(--border)">All teams</a>');
+
+    var onTeam = players.filter(function (p) { return p.current_team_id && T[p.current_team_id]; }).length, byRole = roles.map(function (r) { return [esc(r.name), n0(cnt(players, 'role_id', r.id))]; });
+    var noRole = players.filter(function (p) { return !p.role_id; }).length; if (noRole) byRole.push(['No role set', n0(noRole)]);
+    var playersP = EP.panel('Players', kv(['Item', 'Value'], [['Active', n0(cnt(players, 'status', 'active'))], ['Free agents', n0(cnt(players, 'status', 'free_agent'))], ['Retired', n0(cnt(players, 'status', 'retired'))], ['Inactive', n0(cnt(players, 'status', 'inactive'))], ['Currently on a team', n0(onTeam)], ['Without a team', n0(players.length - onTeam)]]) +
+      '<div class="body"><b>Players by role</b></div>' + kv(['Role', 'Players'], byRole) + '<a href="/players/" style="display:block;padding:12px 16px;color:var(--gold);font-weight:600;border-top:1px solid var(--border)">All players</a>');
+
+    var toursP = EP.panel('Tournaments', kv(['Item', 'Value'], [['Ongoing', n0(cnt(tours, 'status', 'ongoing'))], ['Upcoming', n0(cnt(tours, 'status', 'upcoming'))], ['Completed', n0(cnt(tours, 'status', 'completed'))], ['Total prize pool', EP.money(sum(tours, 'prize_pool'))], ['Scheduled matches', n0(C[3])]]) + '<a href="/tournaments/" style="display:block;padding:12px 16px;color:var(--gold);font-weight:600;border-top:1px solid var(--border)">All tournaments</a>');
+
+    var byTeam = {}; res.forEach(function (x) { var a = byTeam[x.team_id] = byTeam[x.team_id] || { id: x.team_id, kills: 0, pts: 0, n: 0 }; a.kills += x.kills || 0; a.pts += x.total_points || 0; a.n++; });
+    var topK = Object.keys(byTeam).map(function (k) { return byTeam[k]; }).filter(function (a) { return T[a.id]; }).sort(function (a, b) { return b.kills - a.kills; }).slice(0, 5);
+    var resP = EP.panel('Results', kv(['Item', 'Value'], [['Result entries', n0(res.length)], ['Total kills', n0(kills)], ['Total points', n0(sum(res, 'total_points'))]]) +
+      '<div class="body"><b>Most kills by team</b></div>' + EP.table(['Team', 'Entries', 'Kills', 'Points'], topK.map(function (a) { return '<tr><td>' + EP.tl(T[a.id]) + '</td><td class="num">' + a.n + '</td><td class="num gold">' + n0(a.kills) + '</td><td class="num">' + n0(a.pts) + '</td></tr>'; })) + '<a href="/results/" style="display:block;padding:12px 16px;color:var(--gold);font-weight:600;border-top:1px solid var(--border)">All results</a>');
+
+    var since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10), latest = trs.reduce(function (m, x) { return x.transfer_date > m ? x.transfer_date : m; }, '');
+    var trP = EP.panel('Transfers', kv(['Item', 'Value'], [['Total transfers', n0(trs.length)]].concat(Object.keys(EP.TYPE).map(function (k) { return [esc(EP.TYPE[k]), n0(cnt(trs, 'type', k))]; })).concat([['Last 30 days', n0(trs.filter(function (x) { return x.transfer_date >= since; }).length)], ['Latest transfer date', latest ? EP.date(latest) : '—']])) + '<a href="/transfers/" style="display:block;padding:12px 16px;color:var(--gold);font-weight:600;border-top:1px solid var(--border)">All transfers</a>');
+
+    var ids = {}; rks.forEach(function (k) { var f = ents.filter(function (e) { return e.ranking_id === k.id; })[0]; if (f) ids[f.player_id] = 1; });
+    var PL = EP.by(await EP.q('players', { in: { id: Object.keys(ids) } }));
+    var rkP = EP.panel('Rankings', EP.table(['Ranking', 'Entries', 'Rank #1'], rks.map(function (k) {
+      var l = ents.filter(function (e) { return e.ranking_id === k.id; }), f = l[0];
+      return '<tr><td><a href="' + L.ranking(k.slug) + '">' + esc(k.name) + '</a></td><td class="num">' + n0(l.length) + '</td><td>' + (f ? EP.pl(PL[f.player_id]) : '<span class="muted">—</span>') + '</td></tr>';
+    })));
+    return html + '<div class="grid2">' + teamsP + playersP + toursP + resP + trP + rkP + '</div>';
+  };
+
   P.nf = async function () { return EP.panel('Page not found', '<div class="empty">এই পেজটি পাওয়া যায়নি। <a href="/" style="color:var(--gold)">হোমপেজে ফিরে যান</a>।</div>'); };
   EP.run();
 })();

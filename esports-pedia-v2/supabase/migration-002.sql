@@ -8,8 +8,7 @@
 alter table public.teams   add column if not exists is_featured boolean not null default false;
 alter table public.players add column if not exists is_featured boolean not null default false;
 
--- 2) Menu: there is no Statistics page, so remove that link; add News and Spotlight
-delete from public.navigation_items where url = '/statistics/';
+-- 2) Menu: add News and Spotlight (the Statistics link is kept - the page exists now)
 insert into public.navigation_items (label, url, sort_order)
 select 'News', '/news/', 13
 where not exists (select 1 from public.navigation_items where url = '/news/');
